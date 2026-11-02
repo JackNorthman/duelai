@@ -1,0 +1,22 @@
+{
+  "_comment": "Copy to data/config.json (gitignored) and edit. Restart server.py after editing by hand; the Settings page writes this file for you.",
+  "game_root": "",
+  "_game_root_comment": "Folder that holds stbc.exe. Empty = STBC_GAME_ROOT env var, else the current directory.",
+  "model": "qwen2.5:7b",
+  "_model_comment": "Ollama model for the offline brain and the 'local' side in brains sparring. qwen3:8b is smarter but slower. Ollama's address comes from the OLLAMA_URL env var (default http://localhost:11434).",
+  "banter": false,
+  "_banter_comment": "false = orders-only brain (shorter prompt, faster decisions). true = the in-character chat channel.",
+  "brain_mode": "offline",
+  "_brain_mode_comment": "offline = the Ollama model flies every live decision (free). online = Claude (online_model) flies them and Ollama covers any call that fails.",
+  "online_model": "claude-sonnet-5-5",
+  "online_effort": "low",
+  "api_key": "",
+  "_api_key_comment": "Anthropic API key. Prefer the ANTHROPIC_API_KEY environment variable, which wins over this field. Empty = offline only, no strategist.",
+  "api_model": "claude-opus-5-5",
+  "strategist": true,
+  "strategist_effort": "high",
+  "god_ships": [],
+  "_god_ships_comment": "Extra hull class ids barred from 'nogods' sparring drafts (case-insensitive).",
+  "auto_race_exclude": null,
+  "_auto_race_exclude_comment": "null = built-in list. Otherwise a list of race names the auto sparring picker never drafts unprompted."
+}

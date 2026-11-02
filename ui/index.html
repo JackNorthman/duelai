@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DUELAI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="format-detection" content="date=no">
+<link rel="stylesheet" href="/lcars/css/classic.css">
+<style>
+/* ==========================================================================
+   DUEL AI - layout rebuild (Claude Design handoff, inner layout only).
+   The LCARS frame is the theme's own: .left-frame-top / .left-frame keep
+   their elbows and curves from classic.css.  What changed is everything
+   INSIDE it - header composition, label/control pairing, the long pickers,
+   the column rebalance - plus a header tightened from ~230px to 120px.
+
+   Fit contract: 1920x937 renders at native size (root 22px, zero scroll).
+   Smaller windows scale down uniformly rather than clipping; --fit and
+   --shell-h are both measured in JS so no viewport-unit/zoom interaction
+   can get it wrong on either engine.
+   ========================================================================== */
+
+:root {
+	--fit: 1;
+	--shell-h: 100vh;
+	--bar-height: 20px;
+	--divider-height: 6px;
+
+	/* Design type scale, as px-at-root-22 so it stays legible if the root
+	   is ever re-based.  Left in px because the whole canvas scales via
+	   --fit; rem here would compound the two. */
+	--t-banner: 40px;
+	--t-title:  24px;
+	--t-btn:    24px;
+	--t-btn2:   21px;
+	--t-rail:   19px;
+	--t-body:   18px;
+	--t-label:  17px;
+	--t-cap:    16px;
+	--t-stop:   15px;
+	--t-dc:     12px;
+}
+html { zoom: var(--fit); }
+:focus-visible { outline: 3px solid var(--space-white); outline-offset: 2px; }
+.panel-1-button, .panel-1 a, [class^="panel-"], [class^="pan-"], .panel-button { text-transform: uppercase; }
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { animation: none !important; transition: none !important; }
+	html { scroll-behavior: auto; }
+	.dc-row-1, .dc-row-2, .dc-row-3, .dc-row-4 { color: var(--orange); }
+	.dc-row-5, .dc-row-6, .dc-row-7 { color: var(--light-color); }
+}
+
+/* ---------------------------------------------------------------- shell */
+body { overflow: hidden; margin: 0; padding-top: 10px; padding-left: 5px; }
+.wrap-standard {
+	height: var(--shell-h);
+	display: flex; flex-direction: column; gap: var(--divider-height);
+	padding: 0;
+}
+.wrap-standard > .wrap { width: 100%; margin-inline: 0; }
+/* The header is exactly its contents: head-row 56 + gap 6 + nav 32 + gap 6
+   + the theme's bar.  It was pinned at 120px with the bar-panel still
+   carrying classic.css's .first-bar-panel margin (clamp 15-30px), so the
+   stack came to 158px inside a 120px flex-end box and the top 38px - the
+   banner and the cascade - were pushed out through the top of the frame on
+   every page.  Tracks --bar-height so the theme's breakpoints still apply. */
+:root {
+	--head-h: calc(56px + 6px + 32px + 6px + var(--bar-height));
+	/* The elbow.  classic.css draws the inner curve as a 60px concave piece
+	   sitting just above the bar; with the wordmark at 84px the shoulder only
+	   rose 10px above that bar, so 50px of curve had nothing blue behind it -
+	   the wedge bleeding into the corner - and the 22px "02-8790" label was
+	   squeezed into a 14px box.  Wordmark 54 gives the shoulder 68, of which
+	   40 clears the bar: outer radius, inner curve and label all follow. */
+	--wordmark-h: 54px;
+	/* breathing room between the elbows and the content column; the banner
+	   and the body share it so their left edges line up */
+	--content-inset: 22px;
+	--shoulder-h: calc(var(--head-h) - var(--wordmark-h) - 6px);
+	--elbow-r: calc(var(--shoulder-h) - var(--bar-height));
+}
+.wrap-standard > .wrap:first-of-type { flex: none; height: var(--head-h); }
+#gap { flex: 1 1 auto; min-height: 0; margin-top: 0; }
+
+/* ---------------------------------------------------- header (120px) ---
+   Was ~230px with a ~1000x230 black void beside the shoulder.  The banner
+   and the data cascade now share one 56px row, the nav is a single row of
+   six, and the elbow keeps its curve. */
+.left-frame-top {
+	display: flex; flex-direction: column; gap: 6px;
+	height: var(--head-h); overflow: hidden;
+	border-radius: 0 0 0 var(--shoulder-h);
+}
+#wordmark {
+	box-sizing: border-box; height: var(--wordmark-h); min-height: 0; flex: none;
+	font-size: var(--t-btn2); padding: 0 14px 6px;
+}
+.left-frame-top .panel-2 {
+	flex: 1 1 auto; min-height: 0; font-size: var(--t-body);
+	padding: 8px 14px 0 0; line-height: 1;      /* label top-right, above the curve */
+}
+/* the theme's inner-curve pieces, resized to the shoulder actually present */
+.right-frame-top:before, .right-frame-top:after { width: var(--elbow-r); height: var(--elbow-r); }
+.right-frame-top:after { border-radius: 0 0 0 var(--elbow-r); }
+
+.right-frame-top {
+	display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
+	height: var(--head-h);
+}
+.right-frame-top .first-bar-panel { margin-top: 0; }   /* the 30px that did it */
+.head-row { display: flex; align-items: flex-end; gap: 16px; height: 56px; }
+.banner {
+	flex: 1 1 auto; min-width: 0;
+	padding: 0 0 0 var(--content-inset); text-align: left; line-height: 1;
+	font-size: var(--t-banner); color: var(--orange);
+}
+.head-row .data-cascade-wrapper {
+	--dc-font-size: var(--t-dc);
+	--dc-row-height: 14px;
+	flex: none; height: 42px; max-width: 470px;
+	column-gap: 16px; flex-wrap: nowrap; padding: 0; margin: 0;
+	font-size: var(--t-dc); line-height: 14px;
+}
+
+nav.main-nav {
+	display: flex; justify-content: flex-end; flex-wrap: nowrap;
+	width: auto; align-self: stretch;
+	column-gap: 5px; row-gap: 0; gap: 5px;
+	height: 32px; flex: none;
+}
+nav.main-nav button {
+	/* classic.css makes every nav button a column flex box with the label
+	   pinned bottom-right; text-align:center did nothing under that, and the
+	   last glyph of DUEL and CHANNEL sat over the pill's curved end - black on
+	   black, which read as clipping. */
+	display: flex; flex-direction: row; justify-content: center; align-items: center;
+	line-height: 1; padding: 0 12px;
+	width: 132px; height: 32px; flex: none;
+	border: none; border-radius: 100vmax; cursor: pointer;
+	background: var(--gray); color: #000;
+	font: inherit; font-weight: bold; font-size: var(--t-body);
+	text-transform: uppercase; text-align: center;
+}
+nav.main-nav button:hover { filter: brightness(115%); }
+nav.main-nav button.on { filter: brightness(112%); }
+#nav-setup.on    { background: var(--bluey); }
+#nav-spar.on     { background: var(--ice); }
+#nav-ally.on     { background: var(--green); }
+#nav-channel.on  { background: var(--almond-creme); }
+#nav-debrief.on  { background: var(--orange); }
+#nav-settings.on { background: var(--violet-creme); }
+#nav-end         { background: var(--red); }
+
+/* ------------------------------------------------------------ left rail --
+   The theme's rail, but every block flex-sized so the last one can no
+   longer be cut off by the bottom of the window (the old fixed heights). */
+.left-frame { overflow: hidden; border-radius: 104px 0 0 0; }
+.left-frame > div:first-of-type {
+	flex: 1 1 auto; min-height: 0;
+	display: flex; flex-direction: column; gap: 4px;
+}
+.left-frame > div:first-of-type > * { flex: 1 1 0; min-height: 0; font-size: var(--t-rail); }
+.left-frame .pan-launch { flex: 1.15 1 0; background-color: var(--orange) !important; }
+.panel-9 { flex: 1 1 0; }
+.left-frame > div:last-of-type { flex: none; }
+.panel-10 { height: 56px; min-height: 0; font-size: var(--t-rail); }
+#topBtn { flex: none; }
+
+/* ----------------------------------------------------------- right frame */
+.right-frame { display: flex; flex-direction: column; min-height: 0; gap: 6px; }
+.right-frame main {
+	flex: 1 1 auto; min-height: 0;
+	display: flex; flex-direction: column; gap: 10px;
+	padding: 12px 18px 0 var(--content-inset);
+	/* Zero page scroll is the contract.  auto (not hidden) only so a window
+	   smaller than the design canvas degrades instead of amputating. */
+	overflow-y: auto;
+}
+
+.view { display: none; }
+.view.view-on { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; gap: 10px; }
+
+/* ==================================================== shared inner parts */
+
+/* section header: bullet + title + rule */
+.sec { display: flex; align-items: center; gap: 8px; flex: none; }
+.sec > b { width: 18px; height: 16px; border-radius: 100vmax; background: var(--moonlit-violet); flex: none; }
+.sec > h3 {
+	margin: 0; line-height: 1; flex: none;
+	color: var(--golden-orange); font-size: var(--t-title);
+	font-weight: bold; text-transform: uppercase;
+}
+.sec > i { flex: 1 1 auto; height: 16px; border-radius: 0 100vmax 100vmax 0; background: var(--african-violet); }
+.sec.red > b, .sec.red > i { background: var(--red); }
+.sec.red > h3 { color: var(--red); }
+.sec.blue > b, .sec.blue > i { background: var(--bluey); }
+.sec.blue > h3 { color: var(--bluey); }
+.sec.sq > i { border-radius: 0; }
+
+/* label / control pairing.  Still right-aligned (it is LCARS) but now 9px
+   from its control instead of the 850px the old .field-label produced. */
+.lrow { display: grid; grid-template-columns: 126px 1fr; gap: 9px; align-items: center; }
+.lrow.top { align-items: start; }
+.lrow.top > .lbl { padding-top: 5px; }
+.lbl {
+	color: var(--african-violet); font-size: var(--t-label); font-weight: bold;
+	text-transform: uppercase; text-align: right; line-height: 1.05;
+}
+
+/* segmented stop group: one capsule split by 3px black gaps, so a 4-6 stop
+   control reads as one thing rather than six floating pills. */
+.stops { display: flex; gap: 3px; width: fit-content; margin: 0; }
+.stops button {
+	border: none; cursor: pointer; border-radius: 0;
+	background: var(--gray); color: #000;
+	font: inherit; font-weight: bold; font-size: var(--t-stop);
+	text-transform: uppercase; line-height: 1; padding: 7px 16px;
+	width: auto; height: auto; min-width: 0;
+}
+.stops button:first-child { border-radius: 100vmax 0 0 100vmax; }
+.stops button:last-child  { border-radius: 0 100vmax 100vmax 0; }
+.stops button:only-child  { border-radius: 100vmax; }
+.stops button[aria-checked="true"] { background: var(--orange); }
+.stops button:hover { filter: brightness(115%); }
+.stops button:active { filter: brightness(85%); }
+.stops.tight button { padding: 7px 10px; }
+.stops.wide { width: auto; }
+.stops.wide button { flex: 1 1 0; padding: 8px 0; text-align: center; }
+
+/* fields */
+.lcars-field {
+	width: 100%; box-sizing: border-box;
+	background: #000; border: 2px solid var(--african-violet);
+	border-radius: 100vmax; padding: 5px 14px;
+	color: var(--violet-creme); font: inherit; font-weight: bold;
+	font-size: var(--t-label); text-transform: uppercase; line-height: 1.1;
+}
+.lcars-field::placeholder { color: var(--gray); }
+.lcars-field:focus { outline: none; border-color: var(--orange); }
+textarea.lcars-field { border-radius: 16px; height: 78px; line-height: 1.35; resize: none; }
+select.lcars-field { appearance: none; padding-right: 34px; cursor: pointer; }
+.selwrap { position: relative; }
+.selwrap::after {
+	content: "\276F"; position: absolute; right: 6px; top: 50%;
+	transform: translateY(-50%) rotate(90deg);
+	width: 26px; height: 18px; display: flex; align-items: center; justify-content: center;
+	background: var(--african-violet); color: #000; border-radius: 100vmax;
+	font-size: var(--t-dc); font-weight: bold; pointer-events: none;
+}
+.lcars-field:disabled, .lcars-field.off { border-color: var(--gray); color: var(--gray); }
+.selwrap.off::after { background: var(--gray); }
+
+/* long picker: one control for 26-28 options, replacing three stacked
+   3-row grey grids.  Typing filters; matches recolour so hits pop out. */
+.picker {
+	background: #000; border: 2px solid var(--moonlit-violet); border-radius: 16px;
+	padding: 6px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.picker.red  { border-color: var(--red); }
+.picker.blue { border-color: var(--bluey); }
+.picker-top { display: flex; gap: 6px; align-items: center; }
+.picker-top .chev { color: var(--moonlit-violet); font-weight: bold; font-size: var(--t-stop); flex: none; }
+.picker.red  .picker-top .chev { color: var(--red); }
+.picker.blue .picker-top .chev { color: var(--bluey); }
+.picker-top input {
+	flex: 1 1 auto; min-width: 0; background: #000; border: none; outline: none; padding: 0;
+	color: var(--violet-creme); font: inherit; font-weight: bold;
+	font-size: var(--t-label); text-transform: uppercase;
+}
+.picker-top input::placeholder { color: var(--gray); }
+.picker-top .cur {
+	flex: none; background: var(--orange); color: #000;
+	font-weight: bold; font-size: var(--t-cap); text-transform: uppercase;
+	padding: 4px 14px; border-radius: 100vmax; white-space: nowrap; line-height: 1;
+}
+.picker-grid {
+	display: grid; gap: 4px; align-content: start; overflow-y: auto;
+	scrollbar-color: var(--gray) black;
+}
+.picker-grid button {
+	height: 24px; border: none; border-radius: 100vmax; cursor: pointer;
+	background: var(--gray); color: #000;
+	font: inherit; font-weight: bold; font-size: var(--t-stop);
+	text-transform: uppercase; padding: 0 6px; min-width: 0;
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.picker-grid button:hover { filter: brightness(115%); }
+.picker-grid button.hit { background: var(--violet-creme); }
+.picker-grid button.sel { background: var(--orange); }
+#persona-stops .picker-grid { grid-template-columns: repeat(6, 1fr); height: 112px; }
+#spar-red-stops .picker-grid, #spar-blue-stops .picker-grid { grid-template-columns: repeat(4, 1fr); height: 110px; }
+#ally-red-stops .picker-grid, #ally-wing-stops .picker-grid { grid-template-columns: repeat(4, 1fr); height: 110px; }
+
+/* action bar shared by duel + sparring */
+.actbar {
+	flex: none; display: flex; align-items: center; gap: 16px;
+	height: 60px; padding-top: 10px; border-top: 4px solid var(--african-violet);
+}
+.actbar button {
+	height: 44px; border: none; border-radius: 100vmax; cursor: pointer;
+	background: var(--orange); color: #000;
+	font: inherit; font-weight: bold; font-size: var(--t-btn);
+	text-transform: uppercase; text-align: right; padding-right: 22px;
+}
+.actbar button:hover { filter: brightness(115%); }
+.actbar button.sm { font-size: var(--t-btn2); }
+.actbar .hint {
+	flex: 1 1 auto; margin: 0; text-align: right; line-height: 1.3;
+	font-size: var(--t-label); color: var(--african-violet); text-wrap: pretty;
+}
+.actbar .hint em { font-style: normal; color: var(--orange); }
+#btn-stage { width: 260px; }
+#btn-clear { width: 140px; background: var(--gray); }
+#btn-spar  { width: 280px; }
+#btn-ally  { width: 280px; }
+#btn-again { width: 220px; align-self: flex-end; }
+
+/* ============================================================ 1. duel */
+.cols3 {
+	flex: 1 1 auto; min-height: 0;
+	display: grid; grid-template-columns: 1.4fr 1fr 1.2fr; gap: 24px;
+}
+.cols3 > .col { display: flex; flex-direction: column; gap: 17px; min-width: 0; min-height: 0; }
+
+.planlist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 9px 18px; align-content: start; }
+.planlist li {
+	display: flex; align-items: flex-start; gap: 8px;
+	font-size: var(--t-body); text-transform: uppercase;
+	color: var(--violet-creme); line-height: 1.15; overflow-wrap: anywhere;
+}
+.planlist li::before {
+	content: ""; width: 28px; height: 15px; border-radius: 100vmax;
+	background: var(--african-violet); flex: none; margin-top: 3px;
+}
+.planlist li.bullet-orange::before { background: var(--orange); }
+.planlist li.font-orange { color: var(--orange); }
+.planlist li.bullet-gray::before { background: var(--butterscotch); }
+.planlist li.bullet-gray { color: var(--butterscotch); }
+
+#record-summary {
+	list-style: none; margin: 0; padding: 0 6px 0 0;
+	display: flex; flex-direction: column; gap: 13px;
+	min-height: 0; overflow-y: auto; scrollbar-color: var(--gray) black;
+}
+#record-summary li {
+	display: flex; align-items: flex-start; gap: 8px;
+	font-size: var(--t-label); color: var(--violet-creme);
+	line-height: 1.35; text-wrap: pretty; overflow-wrap: anywhere;
+}
+#record-summary li::before {
+	content: ""; width: 28px; height: 15px; border-radius: 100vmax;
+	background: var(--orange); flex: none; margin-top: 4px;
+}
+#record-summary li:first-child { font-size: var(--t-body); color: var(--bluey); }
+
+/* ========================================================= 2. sparring */
+.spar-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; flex: none; }
+.spar-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.spar-params { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px 26px; flex: none; }
+.spar-params .cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.spar-params .cell > .lbl { text-align: left; }
+.spar-readout {
+	flex: 1 1 auto; margin: 0; text-align: right; align-self: center;
+	font-size: var(--t-body); color: var(--african-violet); text-transform: uppercase;
+}
+
+/* ========================================================== 3. channel */
+.live-cap {
+	flex: none; background: var(--red); color: #000; border-radius: 100vmax;
+	font-size: var(--t-label); font-weight: bold; text-transform: uppercase;
+	padding: 3px 14px; line-height: 1;
+}
+#transcript {
+	flex: 1 1 auto; min-height: 0; overflow-y: auto;
+	display: flex; flex-direction: column; gap: 11px;
+	padding-right: 10px; scrollbar-color: var(--gray) black;
+}
+/* pins a short transcript to the composer without the flex-end scroll trap,
+   where anything above the fold becomes unreachable */
+#transcript > :first-child { margin-top: auto; }
+.chat-row { display: grid; grid-template-columns: 96px 1fr; gap: 14px; flex: none; }
+.chat-who {
+	text-align: right; line-height: 1.15;
+	font-size: var(--t-label); font-weight: bold; text-transform: uppercase;
+}
+.chat-who small { display: block; color: var(--gray); font-size: var(--t-stop); font-weight: bold; }
+.chat-b { font-size: var(--t-body); line-height: 1.35; overflow-wrap: anywhere; }
+.composer { flex: none; display: flex; gap: 10px; height: 40px; align-items: center; }
+.composer .lcars-field { flex: 1 1 auto; }
+.composer button {
+	width: 150px; height: 36px; flex: none; border: none; border-radius: 100vmax;
+	background: var(--african-violet); color: #000; cursor: pointer;
+	font: inherit; font-weight: bold; font-size: var(--t-body); text-transform: uppercase;
+}
+.composer button:hover { filter: brightness(115%); }
+
+/* ========================================================== 4. debrief */
+.cols2 {
+	flex: 1 1 auto; min-height: 0;
+	display: grid; grid-template-columns: 1.25fr 1fr; gap: 30px;
+}
+.cols2 > .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+#db-meta { font-size: var(--t-label); color: var(--african-violet); text-transform: uppercase; }
+.score-caps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; flex: none; }
+.score-cap {
+	border-radius: 100vmax; padding: 5px 14px; min-width: 0;
+	color: #000; font-weight: bold; font-size: var(--t-cap);
+	text-transform: uppercase; text-align: right; line-height: 1.1;
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.score-cap small { display: block; font-size: var(--t-stop); font-weight: bold; }
+.legend { display: flex; align-items: center; gap: 10px; flex: none; font-size: var(--t-label); color: var(--african-violet); text-transform: uppercase; }
+.legend i { width: 24px; height: 12px; border-radius: 100vmax; display: inline-block; }
+.plotbox {
+	flex: 1 1 auto; min-height: 90px;
+	border-left: 3px solid var(--african-violet);
+	border-bottom: 3px solid var(--african-violet);
+	padding: 6px 6px 0 8px; display: flex;
+}
+#curve { width: 100%; height: 100%; display: block; }
+/* Sparring debriefs put a whole round table here - the prototype only ever
+   saw the "no sparring" case, so this gets its own shrink+scroll rather
+   than the capsule the handoff drew. */
+#db-spar { flex: 0 1 auto; min-height: 0; overflow: auto; scrollbar-color: var(--gray) black; }
+#db-spar:empty { display: none; }
+#db-spar table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--t-stop); }
+#db-lessons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; flex: none; }
+#db-lessons li {
+	display: flex; align-items: flex-start; gap: 8px;
+	font-size: var(--t-label); color: var(--violet-creme); line-height: 1.35;
+	text-wrap: pretty; overflow-wrap: anywhere;
+}
+#db-lessons li::before { content: ""; width: 28px; height: 15px; border-radius: 100vmax; background: var(--orange); flex: none; margin-top: 4px; }
+#db-replay {
+	flex: 1 1 auto; min-height: 0; overflow-y: auto;
+	background: #000; border: 2px solid var(--gray); border-radius: 16px;
+	padding: 10px 12px; display: flex; flex-direction: column; gap: 7px;
+	scrollbar-color: var(--gray) black;
+}
+#db-replay p { margin: 0; font-size: var(--t-label); color: var(--gray); }
+
+/* ========================================================= 5. settings */
+#view-settings .setcol { max-width: 660px; display: flex; flex-direction: column; gap: 14px; }
+#view-settings .lrow { grid-template-columns: 146px 1fr; gap: 11px; }
+#s-api-key { letter-spacing: .18em; }
+#s-key-status { font-size: var(--t-label); color: var(--bluey); }
+#s-save-status { font-size: var(--t-label); color: var(--gray); }
+#view-settings .stops.wide { width: 200px; }
+.setbtns { display: flex; gap: 10px; padding-top: 8px; }
+.setbtns button {
+	width: 200px; height: 44px; border: none; border-radius: 100vmax; cursor: pointer;
+	background: var(--orange); color: #000;
+	font: inherit; font-weight: bold; font-size: var(--t-btn); text-transform: uppercase;
+}
+.setbtns button:hover { filter: brightness(115%); }
+#btn-clear-key { background: var(--red); }
+</style>
+</head>
+<body>
+	<audio id="audio1" src="/lcars/audio/beep1.mp3" preload="auto"></audio>
+	<audio id="audio2" src="/lcars/audio/beep2.mp3" preload="auto"></audio>
+	<audio id="aud3"  src="/lcars/audio/beep3.mp3" preload="auto"></audio>
+	<audio id="audio4" src="/lcars/audio/beep4.mp3" preload="auto"></audio>
+
+	<section class="wrap-standard" id="column-3">
+
+		<!-- ============ HEADER ROW (theme frame, height = --head-h, sized to its contents) ============ -->
+		<div class="wrap">
+			<div class="left-frame-top">
+				<button class="panel-1-button" id="wordmark">duelai</button>
+				<div class="panel-2">02<span class="hop">-8790</span></div>
+			</div>
+			<div class="right-frame-top">
+				<div class="head-row">
+					<div class="banner" id="banner">duel ai &#149; <span class="hop">setup</span></div>
+					<div class="data-cascade-wrapper" id="default"></div>
+				</div>
+				<nav class="main-nav">
+					<button id="nav-setup" data-view="setup">duel</button>
+					<button id="nav-spar" data-view="spar">sparring</button>
+					<button id="nav-ally" data-view="ally">ally</button>
+					<button id="nav-channel" data-view="channel">channel</button>
+					<button id="nav-debrief" data-view="debrief">debrief</button>
+					<button id="nav-settings" data-view="settings">settings</button>
+					<button id="nav-end">end</button>
+				</nav>
+				<div class="bar-panel first-bar-panel">
+					<div class="bar-1"></div>
+					<div class="bar-2"></div>
+					<div class="bar-3"></div>
+					<div class="bar-4"></div>
+					<div class="bar-5"></div>
+				</div>
+			</div>
+		</div>
+
+		<!-- ============ BODY ROW ============ -->
+		<div class="wrap" id="gap">
+			<div class="left-frame">
+				<button onclick="topFunction()" id="topBtn"><span class="hop">screen</span> top</button>
+				<div>
+					<div class="panel-3" id="p-link">link<span class="hop">-down</span></div>
+					<div class="panel-4" id="p-phase">idle<span class="hop">-00</span></div>
+					<div class="panel-5" id="p-diff">05<span class="hop">-none</span></div>
+					<div class="panel-6" id="p-ollama">brain<span class="hop">-??</span></div>
+					<button class="panel-button pan-8" id="soundBtn" role="switch" aria-checked="false">sound off</button>
+					<button class="panel-button pan-launch" id="launchBtn" title="starts stbc.exe in test mode">launch stbc</button>
+					<div class="panel-9">09<span class="hop">-1701</span></div>
+				</div>
+				<div>
+					<div class="panel-10">10<span class="hop">-8790</span></div>
+				</div>
+			</div>
+			<div class="right-frame">
+				<div class="bar-panel">
+					<div class="bar-6"></div>
+					<div class="bar-7"></div>
+					<div class="bar-8"></div>
+					<div class="bar-9"></div>
+					<div class="bar-10"></div>
+				</div>
+				<main>
+
+					<!-- ================= 1. DUEL ================= -->
+					<section class="view view-on" id="view-setup">
+						<div class="cols3">
+							<div class="col">
+								<div class="sec"><b></b><h3>opponent parameters</h3><i></i></div>
+								<div class="lrow">
+									<span class="lbl" id="lbl-diff">difficulty</span>
+									<div class="stops tight" role="radiogroup" aria-labelledby="lbl-diff" id="diff-stops"></div>
+								</div>
+								<div class="lrow">
+									<span class="lbl" id="lbl-era">era</span>
+									<div class="stops" role="radiogroup" aria-labelledby="lbl-era" id="era-stops"></div>
+								</div>
+								<div class="lrow">
+									<span class="lbl" id="lbl-drange">engagement<br>distance</span>
+									<div class="stops" role="radiogroup" aria-labelledby="lbl-drange" id="duel-range-stops"></div>
+								</div>
+								<div class="lrow">
+									<label class="lbl" for="f-ship">opponent ship</label>
+									<div class="selwrap"><select class="lcars-field" id="f-ship">
+										<option value="">dealer's choice</option>
+									</select></div>
+								</div>
+								<div class="lrow">
+									<label class="lbl" for="f-name">ship name</label>
+									<input class="lcars-field" id="f-name" placeholder="auto">
+								</div>
+								<div class="lrow top">
+									<span class="lbl" id="lbl-persona">commander<br>persona</span>
+									<div class="picker" id="persona-stops" role="group" aria-labelledby="lbl-persona"></div>
+								</div>
+							</div>
+
+							<div class="col">
+								<div class="sec"><b></b><h3>your forces</h3><i></i></div>
+								<div class="lrow">
+									<label class="lbl" for="f-player">ship class</label>
+									<input class="lcars-field" id="f-player" placeholder="sovereign class">
+								</div>
+								<div class="lrow">
+									<label class="lbl" for="f-player-name">ship name</label>
+									<input class="lcars-field" id="f-player-name" placeholder="uss draco">
+								</div>
+								<div class="lrow">
+									<label class="lbl" for="f-player-side">side / species</label>
+									<input class="lcars-field" id="f-player-side" placeholder="federation">
+								</div>
+								<div class="lrow top">
+									<label class="lbl" for="f-allies">allied ships<br>you will field</label>
+									<textarea class="lcars-field" id="f-allies" placeholder="six sovereigns and two akira carriers via call wave"></textarea>
+								</div>
+								<div class="lrow top">
+									<label class="lbl" for="f-scenario">scenario notes<br>for the opponent</label>
+									<textarea class="lcars-field" id="f-scenario" placeholder="a last stand - hold your ground, no retreats, make it dramatic"></textarea>
+								</div>
+							</div>
+
+							<div class="col">
+								<div class="sec"><b></b><h3>staged plan</h3><i></i></div>
+								<ul class="planlist" id="plan-summary">
+									<li class="bullet-gray">nothing staged</li>
+								</ul>
+								<div class="sec"><b></b><h3>service record</h3><i></i></div>
+								<ul id="record-summary">
+									<li>no battles on file</li>
+								</ul>
+							</div>
+						</div>
+
+						<div class="actbar">
+							<button id="btn-stage">stage battle</button>
+							<button class="sm" id="btn-clear">clear</button>
+							<p class="hint">Stage the plan here, then launch quick battle in-game, add your ship plus one filler, and press <em>duel claude</em> on the tactical menu. The opponent spawns itself when the link arms.</p>
+						</div>
+					</section>
+
+					<!-- ================= 2. SPARRING ================= -->
+					<section class="view" id="view-spar">
+						<div class="spar-sides">
+							<div class="spar-side">
+								<div class="sec red"><b></b><h3>red side</h3><i></i></div>
+								<div class="picker red" id="spar-red-stops" role="group" aria-label="red side"></div>
+								<div class="lrow">
+									<label class="lbl" for="spar-red-ship">ship</label>
+									<div class="selwrap off" id="spar-red-wrap"><select class="lcars-field off spar-ship" id="spar-red-ship" aria-label="red ship" disabled></select></div>
+								</div>
+							</div>
+							<div class="spar-side">
+								<div class="sec blue"><b></b><h3>blue side</h3><i></i></div>
+								<div class="picker blue" id="spar-blue-stops" role="group" aria-label="blue side"></div>
+								<div class="lrow">
+									<label class="lbl" for="spar-blue-ship">ship</label>
+									<div class="selwrap off" id="spar-blue-wrap"><select class="lcars-field off spar-ship" id="spar-blue-ship" aria-label="blue ship" disabled></select></div>
+								</div>
+							</div>
+						</div>
+
+						<div class="sec"><b></b><h3>match parameters</h3><i></i></div>
+						<div class="spar-params">
+							<div class="cell"><span class="lbl">ships per side</span><div class="stops wide" id="spar-size-stops"></div></div>
+							<div class="cell"><span class="lbl">rounds</span><div class="stops wide" id="spar-rounds-stops"></div></div>
+							<div class="cell"><span class="lbl">era</span><div class="stops wide" id="spar-era-stops"></div></div>
+							<div class="cell"><span class="lbl">god hulls</span><div class="stops wide" id="spar-gods-stops"></div></div>
+							<div class="cell"><span class="lbl">engagement distance</span><div class="stops wide" id="spar-range-stops"></div></div>
+							<div class="cell"><span class="lbl">cloak learning</span><div class="stops wide" id="spar-cloak-stops"></div></div>
+							<div class="cell"><span class="lbl">brains</span><div class="stops wide" id="spar-brains-stops"></div></div>
+						</div>
+
+						<div style="flex:1 1 auto;min-height:0"></div>
+
+						<div class="actbar">
+							<button id="btn-spar">stage sparring</button>
+							<p class="spar-readout" id="spar-readout"></p>
+						</div>
+					</section>
+
+					<!-- ================= 2b. ALLY MODE ================= -->
+					<section class="view" id="view-ally">
+						<div class="spar-sides">
+							<div class="spar-side">
+								<div class="sec red"><b></b><h3>red force</h3><i></i></div>
+								<div class="picker red" id="ally-red-stops" role="group" aria-label="red force"></div>
+								<div class="lrow">
+									<label class="lbl" for="ally-red-ship">ship</label>
+									<div class="selwrap off" id="ally-red-wrap"><select class="lcars-field off spar-ship" id="ally-red-ship" aria-label="red ship" disabled></select></div>
+								</div>
+							</div>
+							<div class="spar-side">
+								<div class="sec blue"><b></b><h3>your wingman (claude)</h3><i></i></div>
+								<div class="picker blue" id="ally-wing-stops" role="group" aria-label="wingman"></div>
+								<div class="lrow">
+									<label class="lbl" for="ally-wing-ship">ship</label>
+									<div class="selwrap off" id="ally-wing-wrap"><select class="lcars-field off spar-ship" id="ally-wing-ship" aria-label="wingman ship" disabled></select></div>
+								</div>
+							</div>
+						</div>
+
+						<div class="sec"><b></b><h3>battle parameters</h3><i></i></div>
+						<div class="spar-params">
+							<div class="cell"><span class="lbl">red ships</span><div class="stops wide" id="ally-size-stops"></div></div>
+							<div class="cell"><span class="lbl">era</span><div class="stops wide" id="ally-era-stops"></div></div>
+							<div class="cell"><span class="lbl">god hulls</span><div class="stops wide" id="ally-gods-stops"></div></div>
+							<div class="cell"><span class="lbl">engagement distance</span><div class="stops wide" id="ally-range-stops"></div></div>
+						</div>
+						<p class="spar-readout">your wingman hits whatever you target, and peels off to cover you when your shields drop or a red is hammering you. auto wingman = a ship of your race at ~80% of yours (fill in "your ship" on the duel page).</p>
+
+						<div style="flex:1 1 auto;min-height:0"></div>
+
+						<div class="actbar">
+							<button id="btn-ally">stage ally mode</button>
+							<p class="spar-readout" id="ally-readout"></p>
+						</div>
+					</section>
+
+					<!-- ================= 3. CHANNEL ================= -->
+					<section class="view" id="view-channel">
+						<div class="sec sq"><b></b><h3 id="channel-title">battle log</h3><i></i><span class="live-cap">live</span></div>
+						<div id="transcript"></div>
+						<div class="composer">
+							<input class="lcars-field" id="chat-input" placeholder="hail the opponent">
+							<button id="btn-send">send</button>
+						</div>
+					</section>
+
+					<!-- ================= 4. DEBRIEF ================= -->
+					<section class="view" id="view-debrief">
+						<div class="cols2">
+							<div class="col">
+								<div class="sec"><b></b><h3 id="db-title">no battle on record</h3><i></i></div>
+								<div id="db-meta"></div>
+								<div class="score-caps" id="db-scores"></div>
+								<div id="db-spar"></div>
+								<div class="legend">
+									<span>hull curve</span>
+									<i style="background:var(--orange)"></i><span id="lg-ai">opponent</span>
+									<i style="background:var(--bluey)"></i><span id="lg-you">you</span>
+								</div>
+								<div class="plotbox">
+									<svg id="curve" viewBox="0 0 900 260" preserveAspectRatio="none" role="img" aria-label="hull over time"></svg>
+								</div>
+							</div>
+							<div class="col">
+								<div class="sec"><b></b><h3>opponent model</h3><i></i></div>
+								<ul id="db-lessons"></ul>
+								<div class="sec"><b></b><h3>battle archive</h3><i></i></div>
+								<div class="selwrap"><select class="lcars-field" id="f-battle">
+									<option value="">live - latest battle</option>
+								</select></div>
+								<div id="db-replay"><p>select a record to replay its channel log</p></div>
+								<button id="btn-again" class="actbar-btn">run again</button>
+							</div>
+						</div>
+					</section>
+
+					<!-- ================= 5. SETTINGS ================= -->
+					<section class="view" id="view-settings">
+						<div class="setcol">
+							<div class="sec"><b></b><h3>brain</h3><i></i></div>
+							<div class="lrow">
+								<label class="lbl" for="s-api-key">claude<br>api key</label>
+								<input class="lcars-field" id="s-api-key" type="password" placeholder="sk-ant-...">
+							</div>
+							<div class="lrow">
+								<span class="lbl"></span>
+								<div id="s-key-status"></div>
+							</div>
+							<div class="lrow">
+								<label class="lbl" for="s-api-model">strategist<br>model</label>
+								<input class="lcars-field" id="s-api-model" placeholder="claude-opus-5-5">
+							</div>
+							<div class="lrow">
+								<span class="lbl">brain mode</span>
+								<div class="stops wide" id="s-brainmode-stops"></div>
+							</div>
+							<div class="lrow">
+								<label class="lbl" for="s-online-model">online<br>model</label>
+								<input class="lcars-field" id="s-online-model" placeholder="claude-sonnet-5-5">
+							</div>
+							<div class="lrow">
+								<span class="lbl">online effort</span>
+								<div class="stops wide" id="s-effort-stops"></div>
+							</div>
+							<div class="lrow">
+								<span class="lbl"></span>
+								<div id="s-brain-status"></div>
+							</div>
+							<div class="lrow">
+								<span class="lbl">strategist</span>
+								<div class="stops wide" id="s-strategist-stops"></div>
+							</div>
+							<div class="lrow">
+								<span class="lbl">banter</span>
+								<div class="stops wide" id="s-banter-stops"></div>
+							</div>
+							<div class="setbtns">
+								<button id="btn-save-settings">save</button>
+								<button id="btn-clear-key">clear key</button>
+							</div>
+							<div id="s-save-status"></div>
+						</div>
+					</section>
+
+				</main>
+			</div>
+		</div>
+	</section>
+
+	<script src="/lcars/js/lcars.js"></script>
+	<div class="headtrim"> </div>
+	<div class="baseboard"> </div>
+<script>
+"use strict";
+
+function esc(s) {
+	return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+		return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c];
+	});
+}
+function el(tag, cls, text) {
+	var n = document.createElement(tag);
+	if (cls) n.className = cls;
+	if (text != null) n.textContent = text;
+	return n;
+}
+
+/* ------------------------------------------------ fit to the window
+   The console is a 1920x937 canvas.  At that size --fit is 1 and it
+   renders at native scale; anything smaller scales down uniformly rather
+   than clipping.  --shell-h is measured, not a viewport unit, because
+   engines disagree about whether zoom scales vh. */
+// Canvas minus the theme's own chrome: 25px horizontally (body padding-left 5
+// + .wrap padding 5/15) and 20px vertically (the fixed .headtrim/.baseboard).
+var DESIGN_W = 1895, DESIGN_H = 917;
+function fit() {
+	if (innerHeight < 300) return;            // minimised: leave it alone
+	var aw = innerWidth - 25, ah = innerHeight - 20;
+	var f = Math.min(1, aw / DESIGN_W, ah / DESIGN_H);
+	var de = document.documentElement;
+	de.style.setProperty("--fit", f.toFixed(4));
+	de.style.setProperty("--shell-h", Math.floor(ah / f) + "px");
+}
+var fitTimer = null;
+function queueFit() { clearTimeout(fitTimer); fitTimer = setTimeout(fit, 60); }
+window.addEventListener("resize", queueFit);
+fit();
+
+/* ------------------------------------------------ data cascade
+   Six columns of three, sized to the 470x42 slot beside the banner. */
+(function cascade() {
+	var wrap = document.getElementById("default");
+	var seed = 47;
+	function rnd() { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; }
+	var rows = ["dc-row-1", "dc-row-3", "dc-row-5"];
+	for (var c = 0; c < 6; c++) {
+		var col = el("div", "data-column");
+		for (var r = 0; r < rows.length; r++) {
+			var len = 3 + Math.floor(rnd() * 4);
+			var s = "";
+			for (var i = 0; i < len; i++) s += Math.floor(rnd() * 10);
+			col.appendChild(el("div", rows[r], s));
+		}
+		wrap.appendChild(col);
+	}
+})();
+
+/* ------------------------------------------------ sound */
+var soundOn = false;
+var soundBtn = document.getElementById("soundBtn");
+soundBtn.addEventListener("click", function () {
+	soundOn = !soundOn;
+	soundBtn.setAttribute("aria-checked", String(soundOn));
+	soundBtn.textContent = soundOn ? "sound on" : "sound off";
+	if (soundOn) playBeep(2);
+});
+function playBeep(n) {
+	if (!soundOn) return;
+	var e = document.getElementById("audio" + n) || document.getElementById("aud" + n);
+	if (!e) return;
+	e.cloneNode(true).play().catch(function () {});
+}
+
+/* ------------------------------------------------ launch the game */
+var launchBtn = document.getElementById("launchBtn");
+function launchLabel(text, holdMs) {
+	launchBtn.textContent = text;
+	if (holdMs) setTimeout(function () {
+		launchBtn.textContent = "launch stbc";
+		launchBtn.disabled = false;
+	}, holdMs);
+}
+launchBtn.addEventListener("click", function () {
+	playBeep(2);
+	launchBtn.disabled = true;
+	launchLabel("launching");
+	fetch("/api/launch", { method: "POST" })
+		.then(function (r) { return r.json(); })
+		.then(function (d) {
+			if (!d.ok) { launchLabel("launch failed", 5000); playBeep(4); }
+			else if (d.already) launchLabel("already up", 4000);
+			else launchLabel("launching", 8000);
+		})
+		.catch(function () { launchLabel("launch failed", 5000); playBeep(4); });
+});
+
+/* ------------------------------------------------ views */
+var VIEWS = ["setup", "spar", "ally", "channel", "debrief", "settings"];
+var userPinned = 0;   // timestamp of last manual nav; auto-follow pauses 20s
+var NAV_ID = { setup: "nav-setup", spar: "nav-spar", ally: "nav-ally", channel: "nav-channel",
+               debrief: "nav-debrief", settings: "nav-settings" };
+var BANNER = { setup: "setup", spar: "sparring", ally: "ally mode", channel: "open",
+               debrief: "report", settings: "config" };
+function showView(name, manual) {
+	VIEWS.forEach(function (v) {
+		document.getElementById("view-" + v).classList.toggle("view-on", v === name);
+		document.getElementById(NAV_ID[v]).classList.toggle("on", v === name);
+	});
+	document.getElementById("banner").innerHTML =
+		"duel ai &#149; <span class=\"hop\">" + BANNER[name] + "</span>";
+	if (manual) { userPinned = Date.now(); playBeep(2); }
+	if (name === "debrief") { loadLearning(); loadBattles(); }
+	if (name === "channel") pinTranscript();
+}
+document.querySelectorAll("nav [data-view]").forEach(function (b) {
+	b.addEventListener("click", function () { showView(b.dataset.view, true); });
+});
+document.getElementById("nav-end").addEventListener("click", function () {
+	playBeep(4);
+	fetch("/api/end", { method: "POST" });
+});
+document.getElementById("wordmark").addEventListener("click", function () {
+	showView("setup", true);
+});
+
+/* ------------------------------------------------ segmented stop group */
+function stopRow(elId, items, cur, onpick) {
+	var box = document.getElementById(elId);
+	box.innerHTML = "";
+	items.forEach(function (it) {
+		var b = el("button", null, it.label || it.id);
+		b.setAttribute("role", "radio");
+		b.setAttribute("aria-checked", String(it.id === cur));
+		if (it.blurb) b.title = it.blurb;
+		b.addEventListener("click", function () { onpick(it.id); playBeep(2); });
+		box.appendChild(b);
+	});
+}
+
+/* ------------------------------------------------ long picker (typeahead)
+   One control for 26-28 options.  Typing narrows the grid live, matches
+   recolour so hits pop out, and prefix matches sort above substring ones. */
+function buildPicker(elId, getItems, getCur, onpick, noun) {
+	var box = document.getElementById(elId);
+	box.innerHTML = "";
+	var top = el("div", "picker-top");
+	var input = document.createElement("input");
+	input.type = "text";
+	input.setAttribute("aria-label", "filter " + noun);
+	var cur = el("span", "cur");
+	top.appendChild(el("span", "chev", "❯"));
+	top.appendChild(input);
+	top.appendChild(cur);
+	var grid = el("div", "picker-grid");
+	box.appendChild(top);
+	box.appendChild(grid);
+
+	function render() {
+		var items = getItems(), sel = getCur();
+		cur.textContent = sel;
+		input.placeholder = "filter " + items.length + " " + noun;
+		var q = input.value.trim().toLowerCase();
+		var list = items;
+		if (q) {
+			list = items.filter(function (it) { return it.id.toLowerCase().indexOf(q) >= 0; })
+				.sort(function (a, b) {
+					return (a.id.toLowerCase().indexOf(q) === 0 ? 0 : 1) -
+					       (b.id.toLowerCase().indexOf(q) === 0 ? 0 : 1);
+				});
+		}
+		grid.innerHTML = "";
+		list.forEach(function (it) {
+			var b = el("button", it.id === sel ? "sel" : (q ? "hit" : ""), it.id);
+			if (it.blurb) b.title = it.blurb;
+			b.addEventListener("click", function () {
+				input.value = "";
+				onpick(it.id);
+				playBeep(2);
+			});
+			grid.appendChild(b);
+		});
+	}
+	input.addEventListener("input", render);
+	box._render = render;
+	render();
+}
+function repaint(elId) {
+	var box = document.getElementById(elId);
+	if (box && box._render) box._render();
+}
+
+/* ------------------------------------------------ setup form */
+var DIFFS = [], PERSONAS = [];
+var ERAS = [
+	{ id: "auto", blurb: "read the era from the scenario text" },
+	{ id: "tng", blurb: "tng era hulls - the mod's baseline fleet" },
+	{ id: "tmp", blurb: "movie era hulls for both the draft and her escorts" },
+	{ id: "ent", blurb: "nx era hulls for both the draft and her escorts" }
+];
+var DUEL_RANGES = [
+	{ id: "knife", blurb: "400m - on top of you from the first second" },
+	{ id: "close", blurb: "900m - most beams and pulses reach" },
+	{ id: "medium", blurb: "2000m" },
+	{ id: "default", blurb: "the game's 5000m. A slow hull (DS9 Mobile: speed 8.4, "
+	                      + "beams 250) can never close and fights you on torpedoes "
+	                      + "alone all battle." }
+];
+var sel = { difficulty: "officer", persona: "", era: "auto", range: "default" };
+
+function personaItems() {
+	var l = PERSONAS.map(function (p) { return { id: p }; });
+	l.unshift({ id: "auto" });
+	return l;
+}
+function renderStops() {
+	stopRow("diff-stops", DIFFS, sel.difficulty, function (id) {
+		sel.difficulty = id; renderStops(); updateSummary();
+	});
+	stopRow("duel-range-stops", DUEL_RANGES, sel.range, function (id) {
+		sel.range = id; renderStops(); updateSummary();
+	});
+	stopRow("era-stops", ERAS, sel.era, function (id) {
+		sel.era = id; renderStops(); updateSummary();
+	});
+	repaint("persona-stops");
+}
+buildPicker("persona-stops", personaItems,
+	function () { return sel.persona || "auto"; },
+	function (id) { sel.persona = (id === "auto") ? "" : id; repaint("persona-stops"); updateSummary(); },
+	"personas");
+
+function updateSummary(plan) {
+	var ul = document.getElementById("plan-summary");
+	if (plan && plan.mode === "ally") {
+		var a = plan.ally || {};
+		ul.innerHTML =
+			"<li class=\"bullet-orange font-orange\">ally mode staged - arm the link and lead the way</li>" +
+			"<li>" + esc(plan.scenario) + "</li>" +
+			"<li>" + esc((a.red || []).length) + " red vs you + " + esc(plan.ship_name) + "</li>" +
+			"<li>" + esc(a.wing_why || "") + "</li>";
+		return;
+	}
+	if (plan && plan.mode === "spar") {
+		ul.innerHTML =
+			"<li class=\"bullet-orange font-orange\">sparring staged - arm the link and observe</li>" +
+			"<li>" + esc(plan.scenario) + "</li>" +
+			"<li>" + esc(plan.spar_rounds_left) + " round" +
+			(plan.spar_rounds_left === 1 ? "" : "s") + "</li>" +
+			"<li>both sides fight under the game's own ai; red will ignore your ship</li>";
+		return;
+	}
+	if (plan) {
+		ul.innerHTML =
+			"<li class=\"bullet-orange font-orange\">staged and waiting for the link</li>" +
+			"<li>" + esc(plan.ship_name) + " (" + esc(plan.ship_class) + ")</li>" +
+			"<li>difficulty " + esc(plan.difficulty) + "</li>" +
+			(plan.era ? "<li>era " + esc(plan.era) + "</li>" : "") +
+			"<li>persona " + esc(plan.persona) + "</li>";
+		return;
+	}
+	var ship = document.getElementById("f-ship").value || "dealer's choice";
+	ul.innerHTML =
+		"<li>difficulty " + esc(sel.difficulty) + "</li>" +
+		"<li>era " + esc(sel.era) + "</li>" +
+		"<li>ship " + esc(ship) + "</li>" +
+		"<li>persona " + esc(sel.persona || "auto") + "</li>" +
+		"<li>engagement " + esc(sel.range) + "</li>" +
+		"<li class=\"bullet-gray\">not staged yet</li>";
+}
+document.getElementById("f-ship").addEventListener("change", function () { updateSummary(); });
+
+document.getElementById("btn-stage").addEventListener("click", function () {
+	playBeep(2);
+	fetch("/api/plan", {
+		method: "POST", headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			difficulty: sel.difficulty,
+			ship_class: document.getElementById("f-ship").value,
+			ship_name: document.getElementById("f-name").value,
+			persona: sel.persona,
+			era: sel.era,
+			player_ship: document.getElementById("f-player").value,
+			player_name: document.getElementById("f-player-name").value,
+			player_side: document.getElementById("f-player-side").value,
+			player_allies: document.getElementById("f-allies").value,
+			scenario: document.getElementById("f-scenario").value,
+			spawn: ({ knife: 400, close: 900, medium: 2000 })[sel.range] || 0
+		})
+	}).then(function (r) { return r.json(); })
+	  .then(function (d) { if (d.ok) updateSummary(d.plan); });
+});
+document.getElementById("btn-clear").addEventListener("click", function () {
+	playBeep(4);
+	fetch("/api/end", { method: "POST" }).then(function () { updateSummary(); });
+});
+
+/* ------------------------------------------------ chat
+   One row per message: speaker + clock in a 96px gutter, body beside it.
+   Colour follows the rest of the console - opponent is orange everywhere
+   (hull curve, score caps), the admiral is violet. */
+var lastChatI = 0;
+var CHAT_COLOR = { you: "var(--violet-creme)", ai: "var(--orange)", claude: "var(--african-violet)" };
+var CHAT_NAME = { ai: "opponent", claude: "admiral" };
+function chatNodes(m) {
+	var row = el("div", "chat-row");
+	var who = el("div", "chat-who", CHAT_NAME[m.who] || m.who);
+	who.style.color = CHAT_COLOR[m.who] || "var(--bluey)";
+	var d = new Date(m.t * 1000);
+	who.appendChild(el("small", null,
+		String(d.getHours()).padStart(2, "0") + ":" +
+		String(d.getMinutes()).padStart(2, "0") + ":" +
+		String(d.getSeconds()).padStart(2, "0")));
+	var body = el("div", "chat-b", m.text);
+	body.style.color = CHAT_COLOR[m.who] || "var(--bluey)";
+	row.appendChild(who); row.appendChild(body);
+	return [row];
+}
+function pinTranscript() {
+	var t = document.getElementById("transcript");
+	t.scrollTop = t.scrollHeight;
+}
+function addChat(m) {
+	var t = document.getElementById("transcript");
+	var atBottom = (t.scrollHeight - t.scrollTop - t.clientHeight) < 160;
+	chatNodes(m).forEach(function (n) { t.appendChild(n); });
+	if (m.who === "ai") playBeep(1);
+	if (atBottom) pinTranscript();
+}
+/* The server has always had POST /api/chat -> director.user_says(); the old
+   page simply had no way to reach it. */
+function sendChat() {
+	var box = document.getElementById("chat-input");
+	var text = box.value.trim();
+	if (!text) return;
+	box.value = "";
+	playBeep(2);
+	fetch("/api/chat", {
+		method: "POST", headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ text: text })
+	}).catch(function () {});
+}
+document.getElementById("btn-send").addEventListener("click", sendChat);
+document.getElementById("chat-input").addEventListener("keydown", function (e) {
+	if (e.key === "Enter") { e.preventDefault(); sendChat(); }
+});
+
+/* ------------------------------------------------ debrief */
+function fmtWhen(t) {
+	var d = new Date(t * 1000);
+	return String(d.getDate()).padStart(2, "0") + "/" +
+		String(d.getMonth() + 1).padStart(2, "0") + " " +
+		String(d.getHours()).padStart(2, "0") + ":" +
+		String(d.getMinutes()).padStart(2, "0");
+}
+function renderDebrief(db, record) {
+	if (!db) return;
+	var won = db.result.indexOf("victory") === 0;
+	var lost = db.result.indexOf("defeat") === 0;
+	document.getElementById("db-title").textContent =
+		won ? "opponent victory" : (lost ? "player victory" : db.result);
+	document.getElementById("db-meta").textContent =
+		(db.finished_at ? fmtWhen(db.finished_at) + " - " : "") +
+		db.ship + " (" + db.ship_class + ") - " + db.difficulty + " - " +
+		db.duration_ticks + " ticks";
+	document.getElementById("lg-ai").textContent = db.ship || "opponent";
+	var spar = db.difficulty === "sparring";
+	var sparTag = "";
+	if (spar && db.sparring) {
+		var rr = db.sparring.red || 0, bb = db.sparring.blue || 0;
+		sparTag = rr > bb ? "red " + rr + "-" + bb :
+		          bb > rr ? "blue " + bb + "-" + rr : "drawn";
+	}
+	var caps =
+	[["result", spar ? (sparTag || "sparring") :
+	  (won ? "ai wins" : (lost ? "you win" : "no result")),
+	  spar ? "var(--almond-creme)" :
+	  (won ? "var(--tomato)" : (lost ? "var(--bluey)" : "var(--gray)"))],
+	 ["duration", db.duration_ticks + "s", "var(--orange)"],
+	 ["battle", "#" + db.battle_no, "var(--almond-creme)"]];
+	if (record) {
+		caps.push(["your min hull", record.player_min_hull + "%", "var(--african-violet)"]);
+		caps.push(["you cloaked", record.player_cloaked ? "yes" : "no", "var(--butterscotch)"]);
+		if (record.fighters_seen)
+			caps.push(["fighters seen", String(record.fighters_seen), "var(--almond)"]);
+		if (record.player_ship) {
+			var forces = record.player_ship.length > 40 ?
+				record.player_ship.slice(0, 40) + "..." : record.player_ship;
+			caps.push(["your forces", forces, "var(--bluey)"]);
+		}
+	}
+	var scores = document.getElementById("db-scores");
+	scores.innerHTML = "";
+	caps.forEach(function (s) {
+		var cap = el("div", "score-cap");
+		cap.style.background = s[2];
+		cap.title = s[0] + ": " + s[1];
+		cap.innerHTML = esc(s[1]) + "<small>" + esc(s[0]) + "</small>";
+		scores.appendChild(cap);
+	});
+	var sparBox = document.getElementById("db-spar");
+	sparBox.innerHTML = "";
+	if (spar && db.rounds && db.rounds.length) {
+		var h = "<table><tr style=\"color:var(--orange);text-transform:uppercase\">" +
+			"<th style=\"padding:.25rem .6rem\">rd</th><th>red draft</th><th>blue draft</th>" +
+			"<th>winner</th><th>ticks</th><th>red dmg</th><th>blue dmg</th><th>notes</th></tr>";
+		db.rounds.forEach(function (r) {
+			var wc = r.winner === "red" ? "var(--tomato)" :
+			         r.winner === "blue" ? "var(--bluey)" : "var(--gray)";
+			h += "<tr style=\"border-top:1px solid #333\">" +
+				"<td style=\"padding:.25rem .6rem\">" + r.n + (r.tainted ? " ⚠" : "") + "</td>" +
+				"<td>" + esc((r.red || []).join(" + ")) + "</td>" +
+				"<td>" + esc((r.blue || []).join(" + ")) + "</td>" +
+				"<td style=\"color:" + wc + ";font-weight:bold\">" + esc(r.winner) + "</td>" +
+				"<td>" + r.ticks + "</td>" +
+				"<td>" + r.red_dmg_taken + "%</td>" +
+				"<td>" + r.blue_dmg_taken + "%</td>" +
+				"<td style=\"color:var(--gray)\">" + esc((r.facts || []).join("; ")) + "</td></tr>";
+		});
+		h += "</table>";
+		if (db.lesson) h += "<p style=\"line-height:1.4;margin:.6rem 0 0\">" + esc(db.lesson) + "</p>";
+		sparBox.innerHTML = h;
+	}
+	drawCurve(db.curve || []);
+}
+
+/* ------------------------------------------------ battle archive */
+var archiveMode = false;
+var lastLiveDebrief = null;
+
+function loadBattles() {
+	fetch("/api/battles").then(function (r) { return r.json(); }).then(function (list) {
+		var s = document.getElementById("f-battle");
+		var cur = s.value;
+		while (s.options.length > 1) s.remove(1);
+		list.forEach(function (b) {
+			var o = document.createElement("option");
+			o.value = b.file;
+			var tag = b.won === true ? "ai win" : b.won === false ? "you win" : "no result";
+			o.textContent = "#" + b.no + " - " + fmtWhen(b.t) + " - " + tag +
+				" - " + (b.ship || "?") + " @ " + (b.difficulty || "?");
+			s.appendChild(o);
+		});
+		s.value = cur;
+		if (s.selectedIndex < 0) s.selectedIndex = 0;
+	}).catch(function () {});
+}
+function renderReplay(chat) {
+	var box = document.getElementById("db-replay");
+	box.innerHTML = "";
+	if (!chat.length) { box.innerHTML = "<p>no channel log in this record</p>"; return; }
+	chat.forEach(function (m) { chatNodes(m).forEach(function (n) { box.appendChild(n); }); });
+	box.scrollTop = 0;
+}
+document.getElementById("f-battle").addEventListener("change", function () {
+	playBeep(2);
+	var f = this.value;
+	if (!f) {
+		archiveMode = false;
+		document.getElementById("db-replay").innerHTML =
+			"<p>select a record to replay its channel log</p>";
+		if (lastLiveDebrief) renderDebrief(lastLiveDebrief);
+		else {
+			document.getElementById("db-title").textContent = "no battle on record";
+			document.getElementById("db-meta").textContent = "";
+			document.getElementById("db-scores").innerHTML = "";
+			document.getElementById("curve").innerHTML = "";
+		}
+		return;
+	}
+	fetch("/api/battle?f=" + encodeURIComponent(f))
+		.then(function (r) { return r.json(); })
+		.then(function (d) {
+			if (!d.ok) return;
+			archiveMode = true;
+			renderDebrief(d.debrief, d.record);
+			renderReplay(d.chat || []);
+		})
+		.catch(function () {});
+});
+/* "run again" had markup but no listener - /api/rearm was sitting unused. */
+document.getElementById("btn-again").addEventListener("click", function () {
+	playBeep(2);
+	fetch("/api/rearm", { method: "POST" })
+		.then(function () { showView("channel", true); })
+		.catch(function () {});
+});
+
+function drawCurve(curve) {
+	var svg = document.getElementById("curve");
+	svg.innerHTML = "";
+	if (curve.length < 2) return;
+	var t0 = curve[0][0], t1 = curve[curve.length - 1][0] || (t0 + 1);
+	function x(t) { return 10 + 880 * (t - t0) / Math.max(1, t1 - t0); }
+	function y(h) { return 10 + 240 * (1 - Math.max(0, Math.min(100, h)) / 100); }
+	[55, 130, 205].forEach(function (gy) {
+		var g = document.createElementNS("http://www.w3.org/2000/svg", "line");
+		g.setAttribute("x1", 0); g.setAttribute("x2", 900);
+		g.setAttribute("y1", gy); g.setAttribute("y2", gy);
+		g.setAttribute("stroke", "#333"); g.setAttribute("stroke-width", "1");
+		svg.appendChild(g);
+	});
+	function poly(idx, colorVar) {
+		var pts = [];
+		curve.forEach(function (p) { if (p[idx] >= 0) pts.push(x(p[0]) + "," + y(p[idx])); });
+		if (!pts.length) return;
+		var e = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+		e.setAttribute("points", pts.join(" "));
+		e.setAttribute("fill", "none");
+		e.setAttribute("stroke", "var(" + colorVar + ")");
+		e.setAttribute("stroke-width", "4");
+		svg.appendChild(e);
+	}
+	poly(1, "--orange");
+	poly(2, "--bluey");
+}
+function loadLearning() {
+	fetch("/api/learning").then(function (r) { return r.json(); }).then(function (s) {
+		var ul = document.getElementById("db-lessons");
+		ul.innerHTML = "";
+		if (!s.battles) { ul.innerHTML = "<li>no battles on file</li>"; return; }
+		var items = ["battles on file: " + s.battles +
+			" (opponent " + s.ai_wins + " - you " + s.player_wins + ")"];
+		if (s.favourite_player_ship && s.favourite_player_ship !== "unknown")
+			items.push("your usual ship: " + s.favourite_player_ship);
+		(s.lessons || []).slice(-6).forEach(function (l) { items.push("lesson: " + l); });
+		items.forEach(function (txt) { ul.appendChild(el("li", null, txt)); });
+		var rec = document.getElementById("record-summary");
+		rec.innerHTML = "";
+		items.slice(0, 3).forEach(function (txt) { rec.appendChild(el("li", null, txt)); });
+	});
+}
+
+/* ------------------------------------------------ sparring */
+var spar = { range: "default", red: "auto", blue: "auto", size: "2v2", rounds: "x3",
+             era: "auto", gods: false, cloak: "off", brains: "off" };
+// The race list is built from /api/races, which reads the ship database
+// directly - so this picker cannot drift from the game's own Ships menu the
+// way the old hardcoded fourteen did (Omega Fleet, Future Fleet, Monster,
+// Delta Quadrant, ISC, Xindi and the rest were all unreachable from here).
+// Anything with a hand-written blurb below keeps it; everything else gets one
+// generated from its pool size.
+var SPAR_RACE_BLURBS = {
+	"manual": "pick one exact hull for this side instead of drafting from a "
+	        + "race. Both sides can be manual - that is a straight ship-vs-ship "
+	        + "trial. No redrafting between rounds, and the god filter does not "
+	        + "apply to a hull you named yourself.",
+	"omega fleet": "omega-particle hulls - Starfleet, Cardassian and Kessok "
+	        + "frames rebuilt around a power source that should not exist. "
+	        + "Shield tanks: two to eight times the shielding of a normal hull "
+	        + "that size, but most of the fleet cannot answer past 100.",
+	"future fleet": "29th-century timeships. Shields from 450k to 2.34 MILLION "
+	        + "- nothing in this era can meaningfully hurt them, and all four "
+	        + "are over the nogods hull cap, so a 'fair' set cannot filter them.",
+	"monster": "spaceborne lifeforms, not a navy. No hails and no negotiation "
+	        + "- the commander is instructed to stay silent.",
+	"godships": "one hull, and it is not a faction. Here because you asked "
+	        + "for the whole list.",
+	"other": "the junk drawer: stations, asteroid husks and a Ghost Shuttle "
+	        + "rated 999,999,999 hull. Species 8472 lives here too, which is "
+	        + "the only reason to pick it."
+};
+var SPAR_RACES = [{ id: "auto" }, { id: "manual", blurb: SPAR_RACE_BLURBS["manual"] }];
+function loadSparRaces() {
+	fetch("/api/races").then(function (r) { return r.json(); })
+	.then(function (list) {
+		var out = [{ id: "auto" }, { id: "manual", blurb: SPAR_RACE_BLURBS["manual"] }];
+		for (var i = 0; i < list.length; i++) {
+			var r = list[i];
+			var b = SPAR_RACE_BLURBS[r.id]
+			      || (r.ships + " hulls in the database, " + r.pool + " in the draft pool.");
+			if (!r.auto) {
+				// Worth saying out loud: these never appear in an auto/auto
+				// set, so if you want them you have to ask for them.
+				b += " Explicit pick only - never drafted by auto.";
+			}
+			out.push({ id: r.id, blurb: b });
+		}
+		SPAR_RACES = out;
+		renderSparStops();
+		if (typeof renderAllyStops === "function") { renderAllyStops(); }
+	}).catch(function () { /* keep auto+manual; the picker still works */ });
+}
+var SPAR_SIZES = ["1v1", "2v2", "3v3", "4v4"].map(function (r) { return { id: r }; });
+var SPAR_ROUNDS = ["x1", "x3", "x5", "x10"].map(function (r) { return { id: r }; });
+var SPAR_RANGES = [
+	{ id: "knife", blurb: "400m - everything in reach from the first second" },
+	{ id: "close", blurb: "900m - beams and pulses both bite" },
+	{ id: "medium", blurb: "2000m - long-range weapons dominate the approach" },
+	{ id: "default", blurb: "the game's 5000m. Slow or short-ranged hulls "
+	                      + "(DS9 Mobile: speed 8.4, beams 250) can never close "
+	                      + "inside a round and fight with torpedoes only." }
+];
+// cloak=red|blue|both: every cloak-capable hull on those sides fights one
+// cloak play per round - off / mend / alpha / wolfpack - picked by the cloak
+// learner, and the result is banked against its class (data/cloak_learning.json).
+var SPAR_CLOAKS = [
+	{ id: "off", blurb: "stances only - nobody cloaks unless a stance does it" },
+	{ id: "red", blurb: "red cloak-capable hulls play a learned cloak play each "
+	                  + "round (off / mend / alpha / wolfpack), banked per hull" },
+	{ id: "blue", blurb: "the same for blue cloak-capable hulls" },
+	{ id: "both", blurb: "both sides learn - a mirror match becomes self-play. "
+	                   + "With no engagement distance picked, a cloak set starts 1500m apart." }
+];
+// brains=red|blue|swap: Claude commands one side, the local model the other,
+// both on top of the stock AI; hulls stay fixed, results go to data/brains.json.
+var SPAR_BRAINS = [
+	{ id: "off", blurb: "stock AI only on both sides" },
+	{ id: "swap", blurb: "Claude vs the local model, Claude changes side every round - "
+	                   + "pick an even number of rounds so each brain flies each draft once" },
+	{ id: "red", label: "claude red", blurb: "Claude commands red, the local model blue, every round" },
+	{ id: "blue", label: "claude blue", blurb: "Claude commands blue, the local model red, every round" }
+];
+function sparShipState(which) {
+	var manual = (spar[which] === "manual");
+	var s = document.getElementById("spar-" + which + "-ship");
+	var w = document.getElementById("spar-" + which + "-wrap");
+	s.disabled = !manual;
+	s.classList.toggle("off", !manual);
+	w.classList.toggle("off", !manual);
+}
+function sparReadout() {
+	var red = spar.red, blue = spar.blue;
+	if (red === "manual") red = document.getElementById("spar-red-ship").value || "manual";
+	if (blue === "manual") blue = document.getElementById("spar-blue-ship").value || "manual";
+	document.getElementById("spar-readout").textContent =
+		"matchup • " + red + " vs " + blue + " • " + spar.size + " " +
+		spar.rounds.replace("x", "×") + " • " + spar.era + " • gods " +
+		(spar.gods ? "on" : "off") + " • " + spar.range +
+		(spar.brains !== "off" ? " • brains " + spar.brains :
+		 spar.cloak !== "off" ? " • cloak " + spar.cloak : "");
+}
+function renderSparStops() {
+	repaint("spar-red-stops");
+	repaint("spar-blue-stops");
+	sparShipState("red"); sparShipState("blue");
+	stopRow("spar-size-stops", SPAR_SIZES, spar.size, function (id) { spar.size = id; renderSparStops(); });
+	stopRow("spar-rounds-stops", SPAR_ROUNDS, spar.rounds, function (id) { spar.rounds = id; renderSparStops(); });
+	stopRow("spar-era-stops", ["auto", "tng", "tmp", "ent"].map(function (r) { return { id: r }; }),
+		spar.era, function (id) { spar.era = id; renderSparStops(); });
+	stopRow("spar-gods-stops",
+		[{ id: "allowed", label: "on", blurb: "anything goes, Voyager J included" },
+		 { id: "excluded", label: "off", blurb: "hulls over 80k barred - fair fights" }],
+		spar.gods ? "allowed" : "excluded", function (id) {
+			spar.gods = (id === "allowed"); renderSparStops();
+		});
+	stopRow("spar-range-stops", SPAR_RANGES, spar.range, function (id) { spar.range = id; renderSparStops(); });
+	stopRow("spar-cloak-stops", SPAR_CLOAKS, spar.cloak, function (id) { spar.cloak = id; renderSparStops(); });
+	stopRow("spar-brains-stops", SPAR_BRAINS, spar.brains, function (id) { spar.brains = id; renderSparStops(); });
+	sparReadout();
+}
+buildPicker("spar-red-stops", function () { return SPAR_RACES; },
+	function () { return spar.red; },
+	function (id) { spar.red = id; renderSparStops(); }, "races");
+buildPicker("spar-blue-stops", function () { return SPAR_RACES; },
+	function () { return spar.blue; },
+	function (id) { spar.blue = id; renderSparStops(); }, "races");
+["spar-red-ship", "spar-blue-ship"].forEach(function (id) {
+	document.getElementById(id).addEventListener("change", sparReadout);
+});
+renderSparStops();
+loadSparRaces();
+
+document.getElementById("btn-spar").addEventListener("click", function () {
+	playBeep(2);
+	function sparSide(which) {
+		// "auto" leaves the side blank (the server drafts it); "manual"
+		// substitutes the exact class id from that side's picker.
+		var v = spar[which];
+		if (v === "auto") { return ""; }
+		if (v === "manual") { return document.getElementById("spar-" + which + "-ship").value || ""; }
+		return v;
+	}
+	var red = sparSide("red"), blue = sparSide("blue");
+	var races = (red || blue) ? (red + " vs " + blue) : "";
+	var RANGES = { knife: 400, close: 900, medium: 2000 };
+	var cmd = ("spar " + races + " " + spar.size + " " + spar.rounds +
+		(spar.era !== "auto" ? " " + spar.era : "") +
+		(spar.gods ? " gods" : " nogods") +
+		(RANGES[spar.range] ? " @" + RANGES[spar.range] : "") +
+		(spar.cloak !== "off" ? " cloak=" + spar.cloak : "") +
+		(spar.brains !== "off" ? " brains=" + spar.brains : ""))
+		.replace(/\s+/g, " ").trim();
+	// A complete spar command typed into the scenario box wins over the
+	// pickers: it is the more specific instruction, and this button used to
+	// discard it silently, which reads exactly like the box being ignored.
+	// Anything else in that box is prose for the duel opponent - leave it be.
+	var typed = (document.getElementById("f-scenario").value || "").trim();
+	if (/^(spar|sparring|practice)\b/i.test(typed)) { cmd = typed; }
+	fetch("/api/plan", {
+		method: "POST", headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ difficulty: "holodeck", era: sel.era, scenario: cmd })
+	}).then(function (r) { return r.json(); })
+	  .then(function (d) { if (d.ok) { updateSummary(d.plan); showView("setup", true); } });
+});
+
+/* ------------------------------------------------ ally mode */
+var ally = { red: "auto", wing: "auto", size: "2", era: "auto", gods: true, range: "medium" };
+var ALLY_SIZES = ["1", "2", "3", "4", "5", "6"].map(function (r) { return { id: r }; });
+var ALLY_RANGES = [
+	{ id: "close", blurb: "900m - straight into the fight" },
+	{ id: "medium", blurb: "3000m - time to form up and pick a target (default)" },
+	{ id: "far", blurb: "5000m - the game's default spawn distance" }
+];
+function allyWingItems() {
+	var out = [{ id: "auto", blurb: "a ship of YOUR race at about 80% of your ship's strength - "
+	              + "fill in 'your ship' on the duel page, or it matches the red force" }];
+	for (var i = 1; i < SPAR_RACES.length; i++) { out.push(SPAR_RACES[i]); }
+	return out;
+}
+function allyShipState(which) {
+	var manual = (ally[which] === "manual");
+	var s = document.getElementById("ally-" + which + "-ship");
+	var w = document.getElementById("ally-" + which + "-wrap");
+	s.disabled = !manual; s.classList.toggle("off", !manual); w.classList.toggle("off", !manual);
+}
+function allyPick(which) {
+	var v = ally[which];
+	if (v === "auto") { return ""; }
+	if (v === "manual") { return document.getElementById("ally-" + which + "-ship").value || ""; }
+	return v;
+}
+function allyCommand() {
+	var RANGES = { close: 900, medium: 3000, far: 5000 };
+	var red = allyPick("red"), wing = allyPick("wing");
+	return ("ally " + red + " " + ally.size +
+		(ally.era !== "auto" ? " " + ally.era : "") +
+		(ally.gods ? " gods" : " nogods") +
+		" @" + RANGES[ally.range] +
+		(wing ? " wing=" + wing.replace(/\s+/g, "_") : "")).replace(/\s+/g, " ").trim();
+}
+function allyReadout() {
+	document.getElementById("ally-readout").textContent = "order • " + allyCommand();
+}
+function renderAllyStops() {
+	repaint("ally-red-stops"); repaint("ally-wing-stops");
+	allyShipState("red"); allyShipState("wing");
+	stopRow("ally-size-stops", ALLY_SIZES, ally.size, function (id) { ally.size = id; renderAllyStops(); });
+	stopRow("ally-era-stops", ["auto", "tng", "tmp", "ent"].map(function (r) { return { id: r }; }),
+		ally.era, function (id) { ally.era = id; renderAllyStops(); });
+	stopRow("ally-gods-stops",
+		[{ id: "allowed", label: "on", blurb: "anything goes" },
+		 { id: "excluded", label: "off", blurb: "hulls over 80k barred - fair fights" }],
+		ally.gods ? "allowed" : "excluded", function (id) { ally.gods = (id === "allowed"); renderAllyStops(); });
+	stopRow("ally-range-stops", ALLY_RANGES, ally.range, function (id) { ally.range = id; renderAllyStops(); });
+	allyReadout();
+}
+buildPicker("ally-red-stops", function () { return SPAR_RACES; },
+	function () { return ally.red; },
+	function (id) { ally.red = id; renderAllyStops(); }, "races");
+buildPicker("ally-wing-stops", allyWingItems,
+	function () { return ally.wing; },
+	function (id) { ally.wing = id; renderAllyStops(); }, "races");
+["ally-red-ship", "ally-wing-ship"].forEach(function (id) {
+	document.getElementById(id).addEventListener("change", allyReadout);
+});
+renderAllyStops();
+document.getElementById("btn-ally").addEventListener("click", function () {
+	playBeep(2);
+	var cmd = allyCommand();
+	var typed = (document.getElementById("f-scenario").value || "").trim();
+	if (/^(ally|wingman)\b/i.test(typed)) { cmd = typed; }
+	fetch("/api/plan", {
+		method: "POST", headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ difficulty: "officer", era: sel.era, scenario: cmd,
+		                       player_ship: document.getElementById("f-player").value || "" })
+	}).then(function (r) { return r.json(); })
+	  .then(function (d) { if (d.ok) { updateSummary(d.plan); showView("setup", true); } });
+});
+
+/* ------------------------------------------------ settings */
+var settingsState = { strategist: true, banter: false, brain_mode: "offline", online_effort: "low" };
+function onOffRow(elId, cur, onpick) {
+	stopRow(elId, [{ id: "on" }, { id: "off" }], cur ? "on" : "off",
+		function (v) { onpick(v === "on"); });
+}
+function pickStrategist(v) { settingsState.strategist = v; onOffRow("s-strategist-stops", v, pickStrategist); }
+function pickBanter(v) { settingsState.banter = v; onOffRow("s-banter-stops", v, pickBanter); }
+function pickBrainMode(v) {
+	settingsState.brain_mode = v;
+	stopRow("s-brainmode-stops", [
+		{ id: "offline", blurb: "local Ollama model flies every decision - free" },
+		{ id: "online", blurb: "Claude flies every decision (paid per call); the local model covers any call that fails" }],
+		v, pickBrainMode);
+}
+function pickEffort(v) {
+	settingsState.online_effort = v;
+	stopRow("s-effort-stops", [{ id: "low" }, { id: "medium" }, { id: "high" }], v, pickEffort);
+}
+function renderSettings(s) {
+	settingsState.strategist = s.strategist;
+	settingsState.banter = s.banter;
+	document.getElementById("s-api-model").value = s.api_model || "";
+	document.getElementById("s-key-status").textContent = s.api_key_set ?
+		("key on file (" + s.api_key_hint + ") - " +
+		 (s.strategist_live ? "strategist ARMED" : "strategist off")) :
+		"no key on file - strategist disabled";
+	onOffRow("s-strategist-stops", s.strategist, pickStrategist);
+	onOffRow("s-banter-stops", s.banter, pickBanter);
+	document.getElementById("s-online-model").value = s.online_model || "";
+	pickBrainMode(s.brain_mode || "offline");
+	pickEffort(s.online_effort || "low");
+	document.getElementById("s-brain-status").textContent =
+		s.brain_mode !== "online" ? "offline - local model only" :
+		!s.api_key_set ? "online needs an api key - running offline" :
+		s.brain_online_ok === false ? ("online check FAILED: " + (s.brain_online_error || "?") + " - local model is flying") :
+		s.brain_online_ok === true ? "online ARMED - local model is the fallback" :
+		"online - checking key and model...";
+}
+function loadSettings() {
+	fetch("/api/settings").then(function (r) { return r.json(); })
+		.then(renderSettings).catch(function () {});
+}
+loadSettings();
+document.getElementById("btn-save-settings").addEventListener("click", function () {
+	var body = { strategist: settingsState.strategist,
+	             banter: settingsState.banter,
+	             api_model: document.getElementById("s-api-model").value,
+	             brain_mode: settingsState.brain_mode,
+	             online_effort: settingsState.online_effort,
+	             online_model: document.getElementById("s-online-model").value };
+	var key = document.getElementById("s-api-key").value.trim();
+	if (key) body.api_key = key;
+	fetch("/api/settings", { method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body) })
+		.then(function (r) { return r.json(); })
+		.then(function (d) {
+			document.getElementById("s-api-key").value = "";
+			document.getElementById("s-save-status").textContent =
+				"saved. brain mode applies from the next decision; banter from the next staged battle.";
+			setTimeout(loadSettings, 3000);   // pick up the key/model check
+			renderSettings(d.settings);
+			playBeep(2);
+		})
+		.catch(function () {
+			document.getElementById("s-save-status").textContent = "save failed";
+			playBeep(4);
+		});
+});
+document.getElementById("btn-clear-key").addEventListener("click", function () {
+	fetch("/api/settings", { method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ api_key_clear: true }) })
+		.then(function (r) { return r.json(); })
+		.then(function (d) {
+			document.getElementById("s-save-status").textContent = "key cleared.";
+			renderSettings(d.settings);
+		});
+});
+
+/* ------------------------------------------------ status poll */
+var lastPhase = "";
+function chip(e, text, colorVar) {
+	e.innerHTML = esc(text.split("-")[0]) +
+		"<span class=\"hop\">-" + esc(text.split("-").slice(1).join("-") || "") + "</span>";
+	e.style.background = "var(" + colorVar + ")";
+}
+function poll() {
+	fetch("/api/state?since=" + lastChatI)
+		.then(function (r) { return r.json(); })
+		.then(function (st) {
+			(st.chat || []).forEach(function (m) { addChat(m); lastChatI = m.i; });
+
+			chip(document.getElementById("p-link"),
+				st.link_up ? "link-up" : "link-down",
+				st.link_up ? "--green" : "--red");
+			chip(document.getElementById("p-phase"), "mode-" + st.phase, "--orange");
+			chip(document.getElementById("p-diff"),
+				"lvl-" + (st.plan ? st.plan.difficulty : "none"), "--butterscotch");
+			chip(document.getElementById("p-ollama"),
+				st.ollama_ok === false ? "brain-down" :
+				st.brain_mode !== "online" ? "brain-local" :
+				(st.brain_src === "local" || st.brain_online_ok === false) ? "brain-fallback" : "brain-claude",
+				st.ollama_ok === false ? "--mars" :
+				st.brain_mode !== "online" ? "--bluey" :
+				(st.brain_src === "local" || st.brain_online_ok === false) ? "--butterscotch" : "--african-violet");
+
+			if (st.phase === "fighting" && st.plan && st.plan.mode === "ally" && st.ai_ship) {
+				document.getElementById("channel-title").textContent =
+					st.ai_ship.name + " (" + st.ai_ship.hull + "% hull, " +
+					(st.ai_ship.mode || "follow") + ") - " + st.reds_left + " red left";
+			} else if (st.phase === "fighting" && st.ai_ship) {
+				document.getElementById("channel-title").textContent =
+					st.ai_ship.name + (st.player ? " vs your ship (" +
+					st.player.hull + "% hull)" : "");
+			} else if (st.phase === "armed") {
+				document.getElementById("channel-title").textContent = "spawning";
+			}
+
+			if (st.phase === "debrief" && st.debrief) lastLiveDebrief = st.debrief;
+			if (st.phase !== lastPhase) {
+				lastPhase = st.phase;
+				if (Date.now() - userPinned > 20000) {
+					if (st.phase === "fighting" || st.phase === "armed") showView("channel");
+					else if (st.phase === "debrief") showView("debrief");
+					else showView("setup");
+				}
+				if (st.phase === "debrief" && !archiveMode) renderDebrief(st.debrief);
+			} else if (st.phase === "debrief" && st.debrief && !archiveMode) {
+				renderDebrief(st.debrief);
+			}
+		})
+		.catch(function () {});
+}
+setInterval(poll, 1500);
+
+/* ------------------------------------------------ boot */
+showView("setup");
+fetch("/api/state?since=0").then(function (r) { return r.json(); }).then(function (st) {
+	DIFFS = st.difficulties || [];
+	PERSONAS = st.personas || [];
+	renderStops(); updateSummary(st.plan);
+	(st.chat || []).forEach(function (m) { addChat(m); lastChatI = m.i; });
+	loadLearning();
+	loadBattles();
+});
+fetch("/api/ships").then(function (r) { return r.json(); }).then(function (ships) {
+	function describe(sh) {
+		return sh.label + " - hull " + Math.round(sh.hull / 1000) + "k" +
+			(sh.cloak ? " - cloak" : "");
+	}
+	var s = document.getElementById("f-ship");
+	ships.forEach(function (sh) {
+		var o = document.createElement("option");
+		o.value = sh.id;
+		o.textContent = describe(sh);
+		s.appendChild(o);
+	});
+	// the two manual-sparring pickers get the same roster, sorted by name so
+	// they are scannable, with the class id sent verbatim to the server.
+	["spar-red-ship", "spar-blue-ship", "ally-red-ship", "ally-wing-ship"].forEach(function (elId) {
+		var box = document.getElementById(elId);
+		if (!box) { return; }
+		ships.slice().sort(function (a, b) { return a.label.localeCompare(b.label); })
+			.forEach(function (sh) {
+				var o = document.createElement("option");
+				o.value = sh.id;
+				o.textContent = describe(sh);
+				box.appendChild(o);
+			});
+	});
+	renderSparStops();
+});
+</script>
+</body>
+</html>

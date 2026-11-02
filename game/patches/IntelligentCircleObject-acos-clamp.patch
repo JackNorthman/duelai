@@ -1,0 +1,30 @@
+--- a/scripts/AI/PlainAI/IntelligentCircleObject.py
++++ b/scripts/AI/PlainAI/IntelligentCircleObject.py
+@@ -214,6 +214,17 @@
+ 			fSysUp = App.TGPoint3_GetModelUp().Dot(vDirection)
+ 			fSysRight = App.TGPoint3_GetModelRight().Dot(vDirection)
+ 
++			# DUELAI 2026-10-24: a weapon system's rough direction is not
++			# always unit length (Borg Mini Sphere), so fSysUp could pass
++			# +-1 and acos() raised "math domain error" on every refresh of
++			# a guns-out circle.  Normalise, then clamp for rounding.
++			fLen = math.sqrt(fSysFwd * fSysFwd + fSysUp * fSysUp + fSysRight * fSysRight)
++			if fLen <= 0.0:
++				continue
++			fSysFwd = fSysFwd / fLen
++			fSysRight = fSysRight / fLen
++			fSysUp = max(-1.0, min(1.0, fSysUp / fLen))
++
+ 			if abs(fSysFwd) < 0.9:
+ 				# Don't ignore this system.  Determine what
+ 				# angle it's roughly aligned with.
+@@ -273,7 +284,8 @@
+ 			fUp	= fUp / fLength
+ 			fRight	= fRight / fLength
+ 
+-			fAngle = math.acos(fUp)
++			# DUELAI 2026-10-24: rounding can leave fUp a hair past 1.
++			fAngle = math.acos(max(-1.0, min(1.0, fUp)))
+ 			if fRight < 0:
+ 				fAngle = -fAngle
+ 

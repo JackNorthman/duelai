@@ -1,0 +1,17 @@
+# Local state: battle records, learned lessons, config (may hold an API key)
+data/*.json
+!data/*.example.json
+data/*.db
+data/*.bak
+data/*.pre-*
+logs/
+.env
+
+# The third-party LCARS theme is downloaded separately (see lcars/README.md)
+lcars/*
+!lcars/README.md
+
+# Python
+__pycache__/
+*.pyc
+*.bak
